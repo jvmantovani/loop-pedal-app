@@ -1,9 +1,9 @@
 {
-    "m_SelectedDeviceId": "RQ8RA0148SB",
+    "m_SelectedDeviceId": "0078265464",
     "m_SelectedPackage": {
-        "deviceId": "RQ8RA0148SB",
+        "deviceId": "0078265464",
         "name": "com.DefaultCompany.com.unity.template.mobile2D",
-        "processId": 10214,
+        "processId": 14638,
         "exited": false
     },
     "m_SelectedPriority": 0,
@@ -12,6 +12,12 @@
             "deviceId": "RQ8RA0148SB",
             "name": "com.DefaultCompany.com.unity.template.mobile2D",
             "processId": 10214,
+            "exited": false
+        },
+        {
+            "deviceId": "0078265464",
+            "name": "com.DefaultCompany.com.unity.template.mobile2D",
+            "processId": 14638,
             "exited": false
         }
     ],

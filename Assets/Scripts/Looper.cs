@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class Looper : MonoBehaviour
 {
@@ -16,6 +17,14 @@ public class Looper : MonoBehaviour
 
     AudioClip recordClip;
     Coroutine loopRoutine = null;
+
+    [Header("PlayHead")]
+    [SerializeField] Transform playHead;
+
+    [Header("Settings - Looper")]
+    [SerializeField] float looOffsetOnSliderChange = 0.75f;
+    [SerializeField] float pressedDurationToReset = 2f;
+    float pressedTime = 0;
 
     [Header("Wave Selector")]
     [SerializeField] Slider leftSlider;
@@ -38,6 +47,8 @@ public class Looper : MonoBehaviour
     {
         int minFreq;
         int maxFreq;
+
+        Screen.sleepTimeout = SleepTimeout.NeverSleep;
 
         for (int i = 0; i < Microphone.devices.Length; i++)
         {
@@ -82,27 +93,44 @@ public class Looper : MonoBehaviour
         }
     }
 
-    private void PlayLoop(double startDspTime)
+    private void PlayLoop(double startDspTime, float offsetFactor = 0)
     {
         double loopDuration = clipAdjustedDuration > 0 ? clipAdjustedDuration : clipRealDuration;
-        loopRoutine = StartCoroutine(LoopRecordingRoutine(startDspTime, loopDuration));
+        loopRoutine = StartCoroutine(LoopRecordingRoutine(startDspTime, loopDuration, Mathf.Clamp(offsetFactor, 0, 1)));
     }
 
-    private IEnumerator LoopRecordingRoutine(double start, double loopDuration)
+    // Set firstOffset to around 70%-85% of the loop so user
+    // can know much faster if the loop will complete correctly
+    private IEnumerator LoopRecordingRoutine(double start, double loopDuration, float offsetFactor = 0)
     {
-        while (audioSources[0].isPlaying) yield return null;
+        double durationOffseted = clipAdjustedDuration * offsetFactor;
 
-        audioSources[0].time = (float)clipAdjustedStartTime;            //put head on correct start time
-        audioSources[0].PlayScheduled(start);                           //schedule play
-        audioSources[0].SetScheduledEndTime(start + 1*loopDuration);    //schedule end
+        while (audioSources[0].isPlaying)
+        {
+            SetPlayheadPosition(audioSources[0].time, (float)clipRealDuration);
+            yield return null;
+        }
 
-        while(audioSources[1].isPlaying) yield return null;
+        audioSources[0].time = (float)clipAdjustedStartTime + (float)durationOffseted;          //put head on correct start time
+        audioSources[0].PlayScheduled(start);                                                   //schedule play
+        audioSources[0].SetScheduledEndTime(start + 1*loopDuration - durationOffseted);         //schedule end
 
-        audioSources[1].time = (float)clipAdjustedStartTime;            //put head on correct start time
-        audioSources[1].PlayScheduled(start + 1*loopDuration);          //schedule play
-        audioSources[1].SetScheduledEndTime(start + 2*loopDuration);    //schedule end
+        while (audioSources[1].isPlaying)
+        {
+            SetPlayheadPosition(audioSources[1].time, (float)clipRealDuration);
+            yield return null;
+        }
 
-        loopRoutine = StartCoroutine(LoopRecordingRoutine(start + 2*loopDuration, loopDuration));
+        audioSources[1].time = (float)clipAdjustedStartTime;                                    //put head on correct start time
+        audioSources[1].PlayScheduled(start + 1*loopDuration - durationOffseted);               //schedule play
+        audioSources[1].SetScheduledEndTime(start + 2*loopDuration - durationOffseted);         //schedule end
+
+        loopRoutine = StartCoroutine(LoopRecordingRoutine(start + 2*loopDuration - durationOffseted, loopDuration));
+    }
+
+    private void SetPlayheadPosition(float time, float duration)
+    {
+        playHead.localPosition = new Vector3(((time / duration) * width) - width/2, 0, 0);
     }
 
     public void OnWaveSelectorSliderChange(bool isLeftSlider = true)
@@ -112,7 +140,7 @@ public class Looper : MonoBehaviour
         clipAdjustedStartTime = (double)leftSlider.normalizedValue * 0.5f * clipRealDuration;
         clipAdjustedDuration = clipRealDuration - clipAdjustedStartTime - (double)rightSlider.normalizedValue * 0.5f * clipRealDuration;
 
-        PlayLoop(AudioSettings.dspTime + 0.5f);
+        PlayLoop(AudioSettings.dspTime + 0.5f, 0.85f);
     }
 
     private void StopAllAudios()
@@ -180,5 +208,21 @@ public class Looper : MonoBehaviour
 
         Rect rect = new Rect(Vector2.zero, new Vector2(width, height));
         return Sprite.Create(tex, rect, Vector2.zero);
+    }
+
+    // Holding button for enough time will restart app
+    public void OnPedalDown()
+    {
+        pressedTime = Time.time;
+    }
+    public void OnPedalUp()
+    {
+        pressedTime = Time.time - pressedTime;
+        if(pressedTime > pressedDurationToReset) RestartLoopWhole();
+    }
+
+    public void RestartLoopWhole()
+    {
+        SceneManager.LoadScene(0);
     }
 }
