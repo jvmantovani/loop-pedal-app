@@ -1,8 +1,7 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public class Looper : MonoBehaviour
 {
@@ -62,7 +61,7 @@ public class Looper : MonoBehaviour
     // Button Event
     public void OnPedalPress()
     {
-        if(!recording)
+        if (!recording)
         {
             recording = true;
             recStart = AudioSettings.dspTime;
@@ -113,7 +112,7 @@ public class Looper : MonoBehaviour
 
         audioSources[0].time = (float)clipAdjustedStartTime + (float)durationOffseted;          //put head on correct start time
         audioSources[0].PlayScheduled(start);                                                   //schedule play
-        audioSources[0].SetScheduledEndTime(start + 1*loopDuration - durationOffseted);         //schedule end
+        audioSources[0].SetScheduledEndTime(start + 1 * loopDuration - durationOffseted);         //schedule end
 
         while (audioSources[1].isPlaying)
         {
@@ -122,15 +121,15 @@ public class Looper : MonoBehaviour
         }
 
         audioSources[1].time = (float)clipAdjustedStartTime;                                    //put head on correct start time
-        audioSources[1].PlayScheduled(start + 1*loopDuration - durationOffseted);               //schedule play
-        audioSources[1].SetScheduledEndTime(start + 2*loopDuration - durationOffseted);         //schedule end
+        audioSources[1].PlayScheduled(start + 1 * loopDuration - durationOffseted);               //schedule play
+        audioSources[1].SetScheduledEndTime(start + 2 * loopDuration - durationOffseted);         //schedule end
 
-        loopRoutine = StartCoroutine(LoopRecordingRoutine(start + 2*loopDuration - durationOffseted, loopDuration));
+        loopRoutine = StartCoroutine(LoopRecordingRoutine(start + 2 * loopDuration - durationOffseted, loopDuration));
     }
 
     private void SetPlayheadPosition(float time, float duration)
     {
-        playHead.localPosition = new Vector3(((time / duration) * width) - width/2, 0, 0);
+        playHead.localPosition = new Vector3(((time / duration) * width) - width / 2, 0, 0);
     }
 
     public void OnWaveSelectorSliderChange(bool isLeftSlider = true)
@@ -153,7 +152,6 @@ public class Looper : MonoBehaviour
     private Sprite GetWaveformSprite(AudioClip clip)
     {
         int halfheight = height / 2;
-        float heightscale = (float)height * 0.75f;
 
         // get the sound data
         Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
@@ -163,15 +161,16 @@ public class Looper : MonoBehaviour
         samples = new float[samplesize];
         clip.GetData(samples, 0);
 
-
         int clipRealSamples = Mathf.CeilToInt((float)(clipRealDuration / clip.length) * clip.samples);
         int realSampleSize = clipRealSamples * clip.channels;
         float[] realSamples = new float[realSampleSize];
+
+        var maxSampleValue = 0f;
         for (int i = 0; i < realSampleSize; i++)
         {
             realSamples[i] = samples[i];
+            maxSampleValue = Mathf.Max(maxSampleValue, Mathf.Abs(realSamples[i]));
         }
-
 
         //int packsize = (samplesize / width);
         //for (int w = 0; w < width; w++)
@@ -194,10 +193,12 @@ public class Looper : MonoBehaviour
             }
         }
 
+        var heightScale = height / maxSampleValue;
+
         // 2 - plot
         for (int x = 0; x < width; x++)
         {
-            for (int y = 0; y < waveform[x] * heightscale; y++)
+            for (int y = 0; y < waveform[x] * heightScale; y++)
             {
                 tex.SetPixel(x, halfheight + y, foreground);
                 tex.SetPixel(x, halfheight - y, foreground);
@@ -218,7 +219,7 @@ public class Looper : MonoBehaviour
     public void OnPedalUp()
     {
         pressedTime = Time.time - pressedTime;
-        if(pressedTime > pressedDurationToReset) RestartLoopWhole();
+        if (pressedTime > pressedDurationToReset) RestartLoopWhole();
     }
 
     public void RestartLoopWhole()
